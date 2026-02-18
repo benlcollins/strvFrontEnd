@@ -1,6 +1,11 @@
 <script>
     let rawData = [];
     let currentFilter = 'All';
+    let colIndices = {
+        type: 2,
+        time: 3,
+        date: 4
+    };
 
     // --- Constants ---
     const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -39,34 +44,107 @@
 
     function onDataReceived(jsonString) {
         try {
-            rawData = JSON.parse(jsonString);
-            // Remove header row if present
-            if (rawData.length > 0 && (rawData[0][0] === 'Activity ID' || rawData[0][0] === 'Header')) {
-                rawData.shift();
+            const data = JSON.parse(jsonString);
+            if (data.length === 0) {
+                rawData = [];
+                renderHeatmap();
+                return;
             }
+
+            // Detect headers
+            const header = data[0];
+            const lowerHeader = header.map(h => String(h).toLowerCase());
+
+            // Helper to find column index
+            const findCol = (terms) => {
+                return lowerHeader.findIndex(h => terms.some(t => h.includes(t)));
+            };
+
+            const typeIdx = findCol(['type', 'activity type']);
+            const timeIdx = findCol(['moving time', 'duration', 'time']);
+            const dateIdx = findCol(['start date', 'date', 'timestamp']);
+
+            // Update indices if found
+            if (typeIdx !== -1) colIndices.type = typeIdx;
+            if (timeIdx !== -1) colIndices.time = timeIdx;
+            if (dateIdx !== -1) colIndices.date = dateIdx;
+
+            console.log('Detected column indices:', colIndices);
+
+            // Shift if the first row looks like a header (contains "Activity" or "Date")
+            if (lowerHeader.some(h => h.includes('activity') || h.includes('date') || h.includes('id'))) {
+                data.shift();
+            }
+
+            rawData = data;
             renderHeatmap();
         } catch (e) {
-            console.error("Error parsing JSON", e);
+            console.error("Error processing data", e);
+            document.getElementById('app').innerHTML = `<div class="error">Error processing data.</div>`;
         }
     }
 
-    function processData() {
-        // Map dates to total moving time (hours)
-        // Data structure: [ID, Name, Type, MovingTime(sec), StartDate]
-        // Filter by type
+    function parseDuration(val) {
+        if (typeof val === 'number') return val;
+        if (!val) return 0;
 
+        const str = String(val);
+
+        // Handle HH:mm:ss or mm:ss
+        if (str.includes(':') && !str.includes('T')) {
+            const parts = str.split(':').map(Number);
+            if (parts.length === 3) {
+                return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+            } else if (parts.length === 2) {
+                return (parts[0] * 60) + parts[1];
+            }
+        }
+
+        // Handle ISO string from GAS (e.g., 1899-12-30T00:49:03.000Z)
+        if (str.includes('T')) {
+            const d = new Date(val);
+            if (!isNaN(d.getTime())) {
+                // durations in Sheets serialized to JSON often look like 1899-12-30T...
+                // We want the hours/mins/secs regardless of the date part
+                return (d.getHours() * 3600) + (d.getMinutes() * 60) + d.getSeconds();
+            }
+        }
+
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+    }
+
+    function processData() {
         const dailyData = {};
+        const years = new Set();
         let maxHours = 0;
 
-        rawData.forEach(row => {
-            const type = row[2];
-            const movingTimeSec = Number(row[3]);
-            const dateStr = row[4];
+        console.log(`Processing ${rawData.length} rows with filter: ${currentFilter}`);
+
+        // Diagnostic log for first few rows
+        if (rawData.length > 0) {
+            console.log('Sample data (row 0):', JSON.stringify(rawData[0]));
+            console.log('Sample moving time val:', rawData[0][colIndices.time]);
+            console.log('Sample parsed duration:', parseDuration(rawData[0][colIndices.time]));
+        }
+
+        rawData.forEach((row, idx) => {
+            const type = row[colIndices.type];
+            const movingTimeVal = row[colIndices.time];
+            const dateStr = row[colIndices.date];
 
             if (currentFilter !== 'All' && type !== currentFilter) return;
             if (!dateStr) return;
 
             const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return;
+
+            const movingTimeSec = parseDuration(movingTimeVal);
+            if (movingTimeSec <= 0) return;
+
+            // Track year
+            years.add(date.getFullYear());
+
             // Format as YYYY-MM-DD for key
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -83,11 +161,17 @@
             }
         });
 
-        return { dailyData, maxHours };
+        const sortedYears = Array.from(years).sort((a, b) => b - a);
+        console.log('Processed Data Result:', {
+            activeYears: sortedYears,
+            maxHours,
+            uniqueDays: Object.keys(dailyData).length
+        });
+        return { dailyData, maxHours, years: sortedYears };
     }
 
     function renderHeatmap() {
-        const container = document.getElementById('heatmap-grid');
+        const container = document.getElementById('main-heatmap-container');
         container.innerHTML = '';
 
         if (rawData.length === 0) {
@@ -95,46 +179,73 @@
             return;
         }
 
-        const { dailyData, maxHours } = processData();
+        const { dailyData, maxHours, years } = processData();
 
-        // Determine date range for the current year (or dynamic based on data)
-        // For this dashboard, let's show the current calendar year, or the year of the latest data?
-        // Let's default to a fixed year for the demo, e.g., 2023, or dynamic.
-        // Let's find the min and max year in data, or just default to 2023.
-        // Ideally, we start from Jan 1 of the target year.
-        const targetYear = 2023;
+        if (years.length === 0) {
+            container.innerHTML = '<div class="loading">No valid activities found for this filter.</div>';
+            return;
+        }
+
+        years.forEach(year => {
+            renderYearGrid(year, dailyData, maxHours, container);
+        });
+    }
+
+    function renderYearGrid(targetYear, dailyData, maxHours, mainContainer) {
+        // Create Year Container
+        const yearWrapper = document.createElement('div');
+        yearWrapper.className = 'heatmap-container';
+        yearWrapper.style.marginBottom = '40px';
+
+        // Year Label
+        const yearLabel = document.createElement('div');
+        yearLabel.className = 'year-label';
+        yearLabel.innerText = targetYear;
+        yearWrapper.appendChild(yearLabel);
+
+        // Month Labels
+        const monthsAxis = document.createElement('div');
+        monthsAxis.className = 'months-axis';
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        months.forEach(m => {
+            const span = document.createElement('span');
+            span.className = 'month-label';
+            span.innerText = m;
+            monthsAxis.appendChild(span);
+        });
+        yearWrapper.appendChild(monthsAxis);
+
+        // Grid Container
+        const grid = document.createElement('div');
+        grid.className = 'heatmap-grid';
+        yearWrapper.appendChild(grid);
+
+        mainContainer.appendChild(yearWrapper);
+
+        // Generate Grid
         const startDate = new Date(targetYear, 0, 1);
         const endDate = new Date(targetYear, 11, 31);
-
-        // We need to pad the start to align with Monday (if we want Mon start) or Sunday (GitHub style is Sunday start usually?)
-        // GitHub: Weeks start on Sunday usually for the grid from left to right?
-        // Let's assume standard Calendar grid: Columns are weeks.
-        // 52-53 weeks.
-
-        // Generating all days
         let currentDate = new Date(startDate);
 
-        // Adjust start date to the previous Sunday (or Monday) to align the grid
+        // Adjust for Monday start
         const dayOfWeek = startDate.getDay(); // 0 is Sunday
-        // For Monday start: 0(Sun) -> 6, 1(Mon) -> 0, ..., 6(Sat) -> 5
+        // For Monday start: 0(Sun) -> 6, 1(Mon) -> 0...
         const startOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-
-        // We iterate week by week
-        // But CSS Grid `grid-auto-flow: column` fills cells down then right.
-        // So if we just dump 365+ divs, they will fill column 1 (7 days), then column 2, etc.
-        // So we must add "empty" spacer cells at the beginning if Jan 1 is not Sunday.
 
         // Spacer cells
         for (let i = 0; i < startOffset; i++) {
             const spacer = document.createElement('div');
             spacer.className = 'day-cell';
-            spacer.style.backgroundColor = 'transparent'; // Invisible
+            spacer.style.backgroundColor = 'transparent';
             spacer.style.outline = 'none';
-            container.appendChild(spacer);
+            grid.appendChild(spacer);
         }
 
         // Days
         while (currentDate <= endDate) {
+            // Check if we rolled over year (shouldn't happen with logic above but safety)
+            if (currentDate.getFullYear() !== targetYear) break;
+
             const year = currentDate.getFullYear();
             const month = String(currentDate.getMonth() + 1).padStart(2, '0');
             const day = String(currentDate.getDate()).padStart(2, '0');
@@ -146,14 +257,12 @@
             const el = document.createElement('div');
             el.className = `day-cell scale-${intensity}`;
 
-            // Tooltip data
             const dateReadable = currentDate.toDateString();
             const hoursFixed = hours.toFixed(1);
             el.setAttribute('data-tooltip', `${hoursFixed}h on ${dateReadable}`);
 
-            container.appendChild(el);
+            grid.appendChild(el);
 
-            // Next day
             currentDate.setDate(currentDate.getDate() + 1);
         }
     }

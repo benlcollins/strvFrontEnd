@@ -20,27 +20,8 @@
     </div>
 
     <!-- Heatmap Dashboard -->
-    <div class="heatmap-container">
-        <div class="year-label">2023</div>
-        <div class="months-axis">
-            <!-- Simple static labels for now, could be dynamic -->
-            <span class="month-label">Jan</span>
-            <span class="month-label">Feb</span>
-            <span class="month-label">Mar</span>
-            <span class="month-label">Apr</span>
-            <span class="month-label">May</span>
-            <span class="month-label">Jun</span>
-            <span class="month-label">Jul</span>
-            <span class="month-label">Aug</span>
-            <span class="month-label">Sep</span>
-            <span class="month-label">Oct</span>
-            <span class="month-label">Nov</span>
-            <span class="month-label">Dec</span>
-        </div>
-        <div id="heatmap-grid" class="heatmap-grid">
-            <!-- Grid cells injected by JS -->
-            <div class="loading">Loading activities...</div>
-        </div>
+    <div id="main-heatmap-container">
+        <div class="loading">Loading activities...</div>
     </div>
 
     <?!= include('client.js'); ?>
