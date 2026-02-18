@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <base target="_top">
+    <?!= include('style'); ?>
+</head>
+
+<body>
+
+    <h1>Activity Dashboard</h1>
+
+    <!-- Filter Header -->
+    <div class="filter-container">
+        <button class="filter-btn active" data-type="All">All Activities</button>
+        <button class="filter-btn" data-type="Run">Run</button>
+        <button class="filter-btn" data-type="Ride">Ride</button>
+        <button class="filter-btn" data-type="Swim">Swim</button>
+        <button class="filter-btn" data-type="Hike">Hike</button>
+    </div>
+
+    <!-- Heatmap Dashboard -->
+    <div class="heatmap-container">
+        <div class="year-label">2023</div>
+        <div class="months-axis">
+            <!-- Simple static labels for now, could be dynamic -->
+            <span class="month-label">Jan</span>
+            <span class="month-label">Feb</span>
+            <span class="month-label">Mar</span>
+            <span class="month-label">Apr</span>
+            <span class="month-label">May</span>
+            <span class="month-label">Jun</span>
+            <span class="month-label">Jul</span>
+            <span class="month-label">Aug</span>
+            <span class="month-label">Sep</span>
+            <span class="month-label">Oct</span>
+            <span class="month-label">Nov</span>
+            <span class="month-label">Dec</span>
+        </div>
+        <div id="heatmap-grid" class="heatmap-grid">
+            <!-- Grid cells injected by JS -->
+            <div class="loading">Loading activities...</div>
+        </div>
+    </div>
+
+    <?!= include('client.js'); ?>
+</body>
+
+</html>
