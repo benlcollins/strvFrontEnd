@@ -1,0 +1,16 @@
+# Ignore all hidden files/directories
+.*
+
+# Specifically ignore git related files
+.git/
+.gitignore
+
+# Ignore markdown files (documentation)
+**/*.md
+
+# Keep the manifest file
+!appsscript.json
+
+# Keep source files
+!Code.js
+!*.html
