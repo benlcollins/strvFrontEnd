@@ -8,7 +8,8 @@
         date: 4,
         name: 1,
         distance: 5,
-        photos: -1
+        photos: -1,
+        link: -1
     };
 
     // --- Constants ---
@@ -73,6 +74,7 @@
             const nameIdx = findCol(['name', 'activity name', 'title']);
             const distanceIdx = findCol(['distance', 'dist']);
             const photoIdx = findCol(['photos', 'images', 'links', 'media']);
+            const linkIdx = findCol(['strava link', 'link', 'url']);
 
             // Update indices if found
             if (typeIdx !== -1) colIndices.type = typeIdx;
@@ -81,6 +83,7 @@
             if (nameIdx !== -1) colIndices.name = nameIdx;
             if (distanceIdx !== -1) colIndices.distance = distanceIdx;
             if (photoIdx !== -1) colIndices.photos = photoIdx;
+            if (linkIdx !== -1) colIndices.link = linkIdx;
 
             console.log('Detected column indices:', colIndices);
 
@@ -141,6 +144,7 @@
             const name = row[colIndices.name];
             const distance = row[colIndices.distance];
             const photoVal = colIndices.photos !== -1 ? row[colIndices.photos] : null;
+            const linkVal = colIndices.link !== -1 ? row[colIndices.link] : null;
 
             if (currentFilter !== 'All' && type !== currentFilter) return;
             if (!dateStr) return;
@@ -181,7 +185,8 @@
                 distance: distance || 0,
                 hours: hours,
                 type: type || 'Other',
-                photos: photos
+                photos: photos,
+                link: linkVal || null
             });
 
             if (dailyData[dateKey].totalHours > maxHours) {
@@ -287,6 +292,15 @@
                 el.addEventListener('mouseenter', (e) => showTooltip(e, dayData, capturedDate));
                 el.addEventListener('mousemove', (e) => moveTooltip(e));
                 el.addEventListener('mouseleave', () => hideTooltip());
+
+                // Add click event to open Strava links
+                el.addEventListener('click', () => {
+                    dayData.activities.forEach(act => {
+                        if (act.link) {
+                            window.open(act.link, '_blank');
+                        }
+                    });
+                });
             }
 
             grid.appendChild(el);
