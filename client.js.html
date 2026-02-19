@@ -4,7 +4,9 @@
     let colIndices = {
         type: 2,
         time: 3,
-        date: 4
+        date: 4,
+        name: 1,
+        distance: 5
     };
 
     // --- Constants ---
@@ -63,11 +65,15 @@
             const typeIdx = findCol(['type', 'activity type']);
             const timeIdx = findCol(['moving time', 'duration', 'time']);
             const dateIdx = findCol(['start date', 'date', 'timestamp']);
+            const nameIdx = findCol(['name', 'activity name', 'title']);
+            const distanceIdx = findCol(['distance', 'dist']);
 
             // Update indices if found
             if (typeIdx !== -1) colIndices.type = typeIdx;
             if (timeIdx !== -1) colIndices.time = timeIdx;
             if (dateIdx !== -1) colIndices.date = dateIdx;
+            if (nameIdx !== -1) colIndices.name = nameIdx;
+            if (distanceIdx !== -1) colIndices.distance = distanceIdx;
 
             console.log('Detected column indices:', colIndices);
 
@@ -121,17 +127,12 @@
 
         console.log(`Processing ${rawData.length} rows with filter: ${currentFilter}`);
 
-        // Diagnostic log for first few rows
-        if (rawData.length > 0) {
-            console.log('Sample data (row 0):', JSON.stringify(rawData[0]));
-            console.log('Sample moving time val:', rawData[0][colIndices.time]);
-            console.log('Sample parsed duration:', parseDuration(rawData[0][colIndices.time]));
-        }
-
         rawData.forEach((row, idx) => {
             const type = row[colIndices.type];
             const movingTimeVal = row[colIndices.time];
             const dateStr = row[colIndices.date];
+            const name = row[colIndices.name];
+            const distance = row[colIndices.distance];
 
             if (currentFilter !== 'All' && type !== currentFilter) return;
             if (!dateStr) return;
@@ -151,22 +152,28 @@
             const day = String(date.getDate()).padStart(2, '0');
             const dateKey = `${year}-${month}-${day}`;
 
-            if (!dailyData[dateKey]) dailyData[dateKey] = 0;
+            if (!dailyData[dateKey]) {
+                dailyData[dateKey] = {
+                    totalHours: 0,
+                    activities: []
+                };
+            }
 
             const hours = movingTimeSec / 3600;
-            dailyData[dateKey] += hours;
+            dailyData[dateKey].totalHours += hours;
+            dailyData[dateKey].activities.push({
+                name: name || 'Untitled Activity',
+                distance: distance || 0,
+                hours: hours,
+                type: type || 'Other'
+            });
 
-            if (dailyData[dateKey] > maxHours) {
-                maxHours = dailyData[dateKey];
+            if (dailyData[dateKey].totalHours > maxHours) {
+                maxHours = dailyData[dateKey].totalHours;
             }
         });
 
         const sortedYears = Array.from(years).sort((a, b) => b - a);
-        console.log('Processed Data Result:', {
-            activeYears: sortedYears,
-            maxHours,
-            uniqueDays: Object.keys(dailyData).length
-        });
         return { dailyData, maxHours, years: sortedYears };
     }
 
@@ -251,19 +258,83 @@
             const day = String(currentDate.getDate()).padStart(2, '0');
             const dateKey = `${year}-${month}-${day}`;
 
-            const hours = dailyData[dateKey] || 0;
+            const dayData = dailyData[dateKey] || { totalHours: 0, activities: [] };
+            const hours = dayData.totalHours;
             const intensity = calculateIntensity(hours, maxHours);
 
             const el = document.createElement('div');
             el.className = `day-cell scale-${intensity}`;
 
-            const dateReadable = currentDate.toDateString();
-            const hoursFixed = hours.toFixed(1);
-            el.setAttribute('data-tooltip', `${hoursFixed}h on ${dateReadable}`);
+            if (dayData.activities.length > 0) {
+                el.addEventListener('mouseenter', (e) => showTooltip(e, dayData, currentDate));
+                el.addEventListener('mousemove', (e) => moveTooltip(e));
+                el.addEventListener('mouseleave', () => hideTooltip());
+            }
 
             grid.appendChild(el);
 
             currentDate.setDate(currentDate.getDate() + 1);
+        }
+    }
+
+    // --- Tooltip Logic ---
+    let tooltipEl = null;
+
+    function getIcon(type) {
+        const t = String(type).toLowerCase();
+        if (t.includes('run')) return '🏃';
+        if (t.includes('ride') || t.includes('cycling')) return '🚴';
+        if (t.includes('swim')) return '🏊';
+        if (t.includes('hike') || t.includes('walk')) return '🥾';
+        if (t.includes('workout') || t.includes('weight')) return '🏋️';
+        return '🏅';
+    }
+
+    function showTooltip(e, dayData, dateObj) {
+        if (!tooltipEl) {
+            tooltipEl = document.createElement('div');
+            tooltipEl.className = 'custom-tooltip';
+            document.body.appendChild(tooltipEl);
+        }
+
+        const dateStr = dateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+        let html = `<div class="tooltip-date">${dateStr}</div>`;
+
+        dayData.activities.forEach(act => {
+            html += `
+                <div class="tooltip-activity">
+                    <span class="tooltip-icon">${getIcon(act.type)}</span>
+                    <div class="tooltip-details">
+                        <div class="tooltip-name">${act.name}</div>
+                        <div class="tooltip-metrics">
+                            ${act.distance ? act.distance.toFixed(2) + ' mi • ' : ''}
+                            ${act.hours.toFixed(1)}h
+                        </div>
+                    </div>
+                </div>
+             `;
+        });
+
+        tooltipEl.innerHTML = html;
+        tooltipEl.style.display = 'block';
+        moveTooltip(e);
+    }
+
+    function moveTooltip(e) {
+        if (!tooltipEl) return;
+        const x = e.clientX + 15;
+        const y = e.clientY + 15;
+
+        // Prevent going off screen
+        // (Simple check, can be expanded)
+        tooltipEl.style.left = x + 'px';
+        tooltipEl.style.top = y + 'px';
+    }
+
+    function hideTooltip() {
+        if (tooltipEl) {
+            tooltipEl.style.display = 'none';
         }
     }
 
