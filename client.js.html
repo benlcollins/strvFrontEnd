@@ -6,7 +6,8 @@
         time: 3,
         date: 4,
         name: 1,
-        distance: 5
+        distance: 5,
+        photos: 6
     };
 
     // --- Constants ---
@@ -67,6 +68,7 @@
             const dateIdx = findCol(['start date', 'date', 'timestamp']);
             const nameIdx = findCol(['name', 'activity name', 'title']);
             const distanceIdx = findCol(['distance', 'dist']);
+            const photoIdx = findCol(['photos', 'images', 'links', 'media']);
 
             // Update indices if found
             if (typeIdx !== -1) colIndices.type = typeIdx;
@@ -74,6 +76,7 @@
             if (dateIdx !== -1) colIndices.date = dateIdx;
             if (nameIdx !== -1) colIndices.name = nameIdx;
             if (distanceIdx !== -1) colIndices.distance = distanceIdx;
+            if (photoIdx !== -1) colIndices.photos = photoIdx;
 
             console.log('Detected column indices:', colIndices);
 
@@ -133,6 +136,7 @@
             const dateStr = row[colIndices.date];
             const name = row[colIndices.name];
             const distance = row[colIndices.distance];
+            const photoVal = row[colIndices.photos];
 
             if (currentFilter !== 'All' && type !== currentFilter) return;
             if (!dateStr) return;
@@ -160,12 +164,20 @@
             }
 
             const hours = movingTimeSec / 3600;
+
+            // Extract photos (limit to 3)
+            let photos = [];
+            if (photoVal) {
+                photos = String(photoVal).split(/,|\s+/).filter(v => v.trim().startsWith('http')).slice(0, 3);
+            }
+
             dailyData[dateKey].totalHours += hours;
             dailyData[dateKey].activities.push({
                 name: name || 'Untitled Activity',
                 distance: distance || 0,
                 hours: hours,
-                type: type || 'Other'
+                type: type || 'Other',
+                photos: photos
             });
 
             if (dailyData[dateKey].totalHours > maxHours) {
@@ -266,7 +278,8 @@
             el.className = `day-cell scale-${intensity}`;
 
             if (dayData.activities.length > 0) {
-                el.addEventListener('mouseenter', (e) => showTooltip(e, dayData, currentDate));
+                const capturedDate = new Date(currentDate);
+                el.addEventListener('mouseenter', (e) => showTooltip(e, dayData, capturedDate));
                 el.addEventListener('mousemove', (e) => moveTooltip(e));
                 el.addEventListener('mouseleave', () => hideTooltip());
             }
@@ -302,6 +315,15 @@
         let html = `<div class="tooltip-date">${dateStr}</div>`;
 
         dayData.activities.forEach(act => {
+            let photosHtml = '';
+            if (act.photos && act.photos.length > 0) {
+                photosHtml = `<div class="tooltip-photos">`;
+                act.photos.forEach(url => {
+                    photosHtml += `<img src="${url}" class="tooltip-thumb" alt="Activity photo">`;
+                });
+                photosHtml += `</div>`;
+            }
+
             html += `
                 <div class="tooltip-activity">
                     <span class="tooltip-icon">${getIcon(act.type)}</span>
@@ -311,6 +333,7 @@
                             ${act.distance ? act.distance.toFixed(2) + ' mi • ' : ''}
                             ${act.hours.toFixed(1)}h
                         </div>
+                        ${photosHtml}
                     </div>
                 </div>
              `;
