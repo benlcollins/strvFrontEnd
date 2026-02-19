@@ -20,6 +20,11 @@ This project transforms a flat list of Strava activities into a rich, GitHub-sty
 ## Development Note
 This project was built and debugged using [**Google Antigravity**](https://antigravity.google/), an agentic AI coding assistant. Antigravity wrote all the code, from initial heatmap logic to complex rich tooltips and thumbnail integration.
 
+### Automation & Deployment
+A specialized **Project Ops** skill has been implemented for this repository. It enables synchronized deployments to both GitHub and Google Apps Script using a single command:
+- **Command**: `/deploy`
+- **Logic**: Automatically stages files, prompts for a commit message, pushes to GitHub, and runs `clasp push` to update the GAS environment.
+
 ## Tech Stack
 - **Backend**: Google Apps Script (GAS)
 - **Frontend**: HTML5, Vanilla CSS, JavaScript
