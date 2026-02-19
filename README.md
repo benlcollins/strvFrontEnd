@@ -18,7 +18,7 @@ This project transforms a flat list of Strava activities into a rich, GitHub-sty
 - **Hand Cursor Indicator**: Interactive data points show a hand cursor on hover for better UX.
 
 ## Development Note
-This project was built and debugged using **Google Antigravity**, an agentic AI coding assistant. Antigravity wrote all the code, from initial heatmap logic to complex rich tooltips and thumbnail integration.
+This project was built and debugged using [**Google Antigravity**](https://antigravity.google/), an agentic AI coding assistant. Antigravity wrote all the code, from initial heatmap logic to complex rich tooltips and thumbnail integration.
 
 ## Tech Stack
 - **Backend**: Google Apps Script (GAS)
