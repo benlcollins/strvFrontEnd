@@ -8,6 +8,11 @@
 # Ignore markdown files (documentation)
 **/*.md
 
+# Ignore images
+**/*.png
+**/*.jpg
+**/*.webp
+
 # Keep the manifest file
 !appsscript.json
 
