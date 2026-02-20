@@ -19,12 +19,33 @@
             <button class="filter-btn" data-type="Swim">Swim</button>
             <button class="filter-btn" data-type="Hike">Hike</button>
         </div>
-        <button id="reopen-random-photo-btn" class="random-photo-btn" style="display: none;">📷 View Random Memory</button>
+        <button id="reopen-random-photo-btn" class="random-photo-btn" style="display: none;">📷 View Random
+            Memory</button>
     </div>
 
     <!-- Random Photo Container -->
     <div id="random-photo-container" style="display: none;">
-        <!-- Filled dynamically by client.js -->
+        <div class="rp-header">
+            <h3 class="rp-title">Random Memory</h3>
+            <div class="rp-header-actions" style="display: flex; gap: 12px; align-items: center;">
+                <button class="rp-close" onclick="initRandomPhoto()" title="Show another random memory"
+                    style="font-size: 18px;">↻</button>
+                <button class="rp-close" onclick="closeRandomPhoto()" title="Close">×</button>
+            </div>
+        </div>
+        <div class="rp-image-wrapper">
+            <button id="rp-btn-prev" class="rp-arrow rp-arrow-left" onclick="changeRandomPhoto(-1)"
+                style="display: none;">❮</button>
+            <img id="rp-img-display" src="" class="rp-image" alt="Random Activity Photo">
+            <button id="rp-btn-next" class="rp-arrow rp-arrow-right" onclick="changeRandomPhoto(1)"
+                style="display: none;">❯</button>
+        </div>
+        <div class="rp-details">
+            <div id="rp-date-display" class="rp-activity-date"
+                style="font-size: 13px; color: #586069; margin-bottom: 6px;"></div>
+            <div id="rp-title-display"></div>
+            <div id="rp-meta-display" class="rp-activity-meta"></div>
+        </div>
     </div>
 
     <!-- Heatmap Dashboard -->

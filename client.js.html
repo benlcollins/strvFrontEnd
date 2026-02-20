@@ -377,57 +377,56 @@
 
     function renderRandomPhoto() {
         if (!randomPhotoActivity) return;
-        const container = document.getElementById('random-photo-container');
 
         let photoUrl = randomPhotoActivity.photos[currentPhotoIndex];
 
+        // Update Image
+        const imgEl = document.getElementById('rp-img-display');
+        if (imgEl) imgEl.src = photoUrl;
+
         // Arrows
-        let leftArrow = '';
-        let rightArrow = '';
+        const leftArrow = document.getElementById('rp-btn-prev');
+        const rightArrow = document.getElementById('rp-btn-next');
         if (randomPhotoActivity.photos.length > 1) {
-            leftArrow = `<button class="rp-arrow rp-arrow-left" onclick="changeRandomPhoto(-1)">❮</button>`;
-            rightArrow = `<button class="rp-arrow rp-arrow-right" onclick="changeRandomPhoto(1)">❯</button>`;
+            if (leftArrow) leftArrow.style.display = 'flex';
+            if (rightArrow) rightArrow.style.display = 'flex';
+        } else {
+            if (leftArrow) leftArrow.style.display = 'none';
+            if (rightArrow) rightArrow.style.display = 'none';
         }
 
         // Title link
-        let titleHtml = randomPhotoActivity.name;
-        if (randomPhotoActivity.link) {
-            titleHtml = `<a href="${randomPhotoActivity.link}" target="_blank" class="rp-activity-name">${randomPhotoActivity.name}</a>`;
-        } else {
-            titleHtml = `<div class="rp-activity-name">${randomPhotoActivity.name}</div>`;
+        const titleContainer = document.getElementById('rp-title-display');
+        if (titleContainer) {
+            if (randomPhotoActivity.link) {
+                titleContainer.innerHTML = `<a href="${randomPhotoActivity.link}" target="_blank" class="rp-activity-name">${randomPhotoActivity.name}</a>`;
+            } else {
+                titleContainer.innerHTML = `<div class="rp-activity-name">${randomPhotoActivity.name}</div>`;
+            }
         }
 
         // Date display
-        let dateHtml = '';
-        if (randomPhotoActivity.date) {
-            dateHtml = `<div class="rp-activity-date" style="font-size: 13px; color: #586069; margin-bottom: 6px;">${randomPhotoActivity.date}</div>`;
+        const dateContainer = document.getElementById('rp-date-display');
+        if (dateContainer) {
+            if (randomPhotoActivity.date) {
+                dateContainer.innerText = randomPhotoActivity.date;
+                dateContainer.style.display = 'block';
+            } else {
+                dateContainer.style.display = 'none';
+            }
         }
 
-        container.innerHTML = `
-            <div class="rp-header">
-                <h3 class="rp-title">Random Memory</h3>
-                <div class="rp-header-actions" style="display: flex; gap: 12px; align-items: center;">
-                    <button class="rp-close" onclick="initRandomPhoto()" title="Show another random memory" style="font-size: 18px;">↻</button>
-                    <button class="rp-close" onclick="closeRandomPhoto()" title="Close">×</button>
-                </div>
-            </div>
-            <div class="rp-image-wrapper">
-                ${leftArrow}
-                <img src="${photoUrl}" class="rp-image" alt="Random Activity Photo">
-                ${rightArrow}
-            </div>
-            <div class="rp-details">
-                ${dateHtml}
-                ${titleHtml}
-                <div class="rp-activity-meta">
-                    <span>${getIcon(randomPhotoActivity.type)} ${randomPhotoActivity.type}</span>
-                    <span>•</span>
-                    <span>${randomPhotoActivity.distance ? parseFloat(randomPhotoActivity.distance).toFixed(2) + ' mi' : '0 mi'}</span>
-                    <span>•</span>
-                    <span>${randomPhotoActivity.hours.toFixed(1)}h</span>
-                </div>
-            </div>
-        `;
+        // Meta display
+        const metaContainer = document.getElementById('rp-meta-display');
+        if (metaContainer) {
+            metaContainer.innerHTML = `
+                <span>${getIcon(randomPhotoActivity.type)} ${randomPhotoActivity.type}</span>
+                <span>•</span>
+                <span>${randomPhotoActivity.distance ? parseFloat(randomPhotoActivity.distance).toFixed(2) + ' mi' : '0 mi'}</span>
+                <span>•</span>
+                <span>${randomPhotoActivity.hours.toFixed(1)}h</span>
+            `;
+        }
     }
 
     function changeRandomPhoto(dir) {
