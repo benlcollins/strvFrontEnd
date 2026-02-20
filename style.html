@@ -127,16 +127,17 @@
   .rp-image-wrapper {
     position: relative;
     width: 100%;
+    aspect-ratio: 4 / 3;
     background: #fafbfc;
     display: flex;
     justify-content: center;
     align-items: center;
+    overflow: hidden;
   }
 
   .rp-image {
     width: 100%;
-    height: auto;
-    max-height: 50vh;
+    height: 100%;
     object-fit: contain;
   }
 
