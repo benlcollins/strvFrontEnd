@@ -17,16 +17,15 @@
     font-family: var(--font-stack);
     color: var(--text-color);
     background-color: var(--bg-color);
-    margin: 0;
+    margin: 0 auto;
     padding: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    max-width: 1200px;
   }
 
   h1 {
     font-weight: 600;
     margin-bottom: 20px;
+    text-align: center;
   }
 
   /* Filter Buttons */
@@ -87,11 +86,11 @@
   #random-photo-container {
     width: 100%;
     max-width: 600px;
+    margin: 0 auto 40px auto;
     background: white;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     overflow: hidden;
-    margin-bottom: 40px;
     position: relative;
     border: 1px solid #e1e4e8;
   }
@@ -128,16 +127,16 @@
   .rp-image-wrapper {
     position: relative;
     width: 100%;
-    height: 400px;
-    background: #000;
+    background: #fafbfc;
     display: flex;
     justify-content: center;
     align-items: center;
   }
 
   .rp-image {
-    max-width: 100%;
-    max-height: 100%;
+    width: 100%;
+    height: auto;
+    max-height: 50vh;
     object-fit: contain;
   }
 
@@ -196,6 +195,15 @@
   }
 
   /* Heatmap Container */
+  #main-heatmap-container {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
   .heatmap-container {
     display: flex;
     flex-direction: column;
@@ -203,6 +211,8 @@
     overflow-x: auto;
     max-width: 100%;
     padding-bottom: 20px;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 auto;
   }
 
   .year-label {
