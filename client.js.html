@@ -12,6 +12,9 @@
         link: -1
     };
 
+    let randomPhotoActivity = null;
+    let currentPhotoIndex = 0;
+
     // --- Constants ---
     const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -20,6 +23,16 @@
         console.log("DOMContentLoaded fired.");
         fetchData();
         setupFilters();
+
+        document.getElementById('reopen-random-photo-btn').addEventListener('click', () => {
+            // Check if we have an activity to show
+            if (randomPhotoActivity) {
+                // If the user clicks reopen, maybe we can pick a new random photo or just show the same one.
+                // It's fun to pick a new one, but let's stick to showing the current random photo for now to keep it simple,
+                // or actually calling initRandomPhoto() again will pick a new one!
+                initRandomPhoto();
+            }
+        });
     });
 
     function setupFilters() {
@@ -93,6 +106,7 @@
             }
 
             rawData = data;
+            initRandomPhoto();
             renderHeatmap();
         } catch (e) {
             console.error("Error processing data", e);
@@ -309,6 +323,126 @@
         }
     }
 
+    // --- Random Photo Logic ---
+    function initRandomPhoto() {
+        const activitiesWithPhotos = [];
+        rawData.forEach(row => {
+            const photoVal = colIndices.photos !== -1 ? row[colIndices.photos] : null;
+            if (photoVal) {
+                const photos = String(photoVal).split(/,|\s+/).filter(v => v.trim().startsWith('http'));
+                if (photos.length > 0) {
+                    activitiesWithPhotos.push({
+                        row: row,
+                        photos: photos
+                    });
+                }
+            }
+        });
+
+        if (activitiesWithPhotos.length > 0) {
+            const randomIndex = Math.floor(Math.random() * activitiesWithPhotos.length);
+            const selected = activitiesWithPhotos[randomIndex];
+
+            const type = selected.row[colIndices.type] || 'Activity';
+            const name = selected.row[colIndices.name] || 'Untitled Activity';
+            const distance = selected.row[colIndices.distance] || 0;
+            const timeVal = selected.row[colIndices.time];
+            const movingTimeSec = parseDuration(timeVal);
+            const hours = movingTimeSec / 3600;
+            const link = colIndices.link !== -1 ? selected.row[colIndices.link] : null;
+
+            // Format date if available
+            let dateFormatted = '';
+            const dateStr = selected.row[colIndices.date];
+            if (dateStr) {
+                const dateObj = new Date(dateStr);
+                if (!isNaN(dateObj.getTime())) {
+                    dateFormatted = dateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                }
+            }
+
+            randomPhotoActivity = {
+                type, name, distance, hours, link, photos: selected.photos, date: dateFormatted
+            };
+
+            currentPhotoIndex = 0;
+            renderRandomPhoto();
+            document.getElementById('random-photo-container').style.display = 'block';
+            document.getElementById('reopen-random-photo-btn').style.display = 'none';
+        } else {
+            document.getElementById('random-photo-container').style.display = 'none';
+            document.getElementById('reopen-random-photo-btn').style.display = 'none';
+        }
+    }
+
+    function renderRandomPhoto() {
+        if (!randomPhotoActivity) return;
+        const container = document.getElementById('random-photo-container');
+
+        let photoUrl = randomPhotoActivity.photos[currentPhotoIndex];
+
+        // Arrows
+        let leftArrow = '';
+        let rightArrow = '';
+        if (randomPhotoActivity.photos.length > 1) {
+            leftArrow = `<button class="rp-arrow rp-arrow-left" onclick="changeRandomPhoto(-1)">❮</button>`;
+            rightArrow = `<button class="rp-arrow rp-arrow-right" onclick="changeRandomPhoto(1)">❯</button>`;
+        }
+
+        // Title link
+        let titleHtml = randomPhotoActivity.name;
+        if (randomPhotoActivity.link) {
+            titleHtml = `<a href="${randomPhotoActivity.link}" target="_blank" class="rp-activity-name">${randomPhotoActivity.name}</a>`;
+        } else {
+            titleHtml = `<div class="rp-activity-name">${randomPhotoActivity.name}</div>`;
+        }
+
+        // Date display
+        let dateHtml = '';
+        if (randomPhotoActivity.date) {
+            dateHtml = `<div class="rp-activity-date" style="font-size: 13px; color: #586069; margin-bottom: 6px;">${randomPhotoActivity.date}</div>`;
+        }
+
+        container.innerHTML = `
+            <div class="rp-header">
+                <h3 class="rp-title">Random Memory</h3>
+                <div class="rp-header-actions" style="display: flex; gap: 12px; align-items: center;">
+                    <button class="rp-close" onclick="initRandomPhoto()" title="Show another random memory" style="font-size: 18px;">↻</button>
+                    <button class="rp-close" onclick="closeRandomPhoto()" title="Close">×</button>
+                </div>
+            </div>
+            <div class="rp-image-wrapper">
+                ${leftArrow}
+                <img src="${photoUrl}" class="rp-image" alt="Random Activity Photo">
+                ${rightArrow}
+            </div>
+            <div class="rp-details">
+                ${dateHtml}
+                ${titleHtml}
+                <div class="rp-activity-meta">
+                    <span>${getIcon(randomPhotoActivity.type)} ${randomPhotoActivity.type}</span>
+                    <span>•</span>
+                    <span>${randomPhotoActivity.distance ? parseFloat(randomPhotoActivity.distance).toFixed(2) + ' mi' : '0 mi'}</span>
+                    <span>•</span>
+                    <span>${randomPhotoActivity.hours.toFixed(1)}h</span>
+                </div>
+            </div>
+        `;
+    }
+
+    function changeRandomPhoto(dir) {
+        if (!randomPhotoActivity) return;
+        currentPhotoIndex += dir;
+        if (currentPhotoIndex < 0) currentPhotoIndex = randomPhotoActivity.photos.length - 1;
+        if (currentPhotoIndex >= randomPhotoActivity.photos.length) currentPhotoIndex = 0;
+        renderRandomPhoto();
+    }
+
+    function closeRandomPhoto() {
+        document.getElementById('random-photo-container').style.display = 'none';
+        document.getElementById('reopen-random-photo-btn').style.display = 'block';
+    }
+
     // --- Tooltip Logic ---
     let tooltipEl = null;
 
@@ -331,20 +465,20 @@
 
         const dateStr = dateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
-        let html = `<div class="tooltip-date">${dateStr}</div>`;
+        let html = `< div class="tooltip-date" > ${dateStr}</div > `;
 
         dayData.activities.forEach(act => {
             let photosHtml = '';
             if (act.photos && act.photos.length > 0) {
-                photosHtml = `<div class="tooltip-photos">`;
+                photosHtml = `< div class="tooltip-photos" > `;
                 act.photos.forEach(url => {
-                    photosHtml += `<img src="${url}" class="tooltip-thumb" alt="Activity photo">`;
+                    photosHtml += `< img src = "${url}" class="tooltip-thumb" alt = "Activity photo" > `;
                 });
-                photosHtml += `</div>`;
+                photosHtml += `</div > `;
             }
 
             html += `
-                <div class="tooltip-activity">
+                < div class="tooltip-activity" >
                     <span class="tooltip-icon">${getIcon(act.type)}</span>
                     <div class="tooltip-details">
                         <div class="tooltip-name">${act.name}</div>
@@ -354,7 +488,7 @@
                         </div>
                         ${photosHtml}
                     </div>
-                </div>
+                </div >
              `;
         });
 

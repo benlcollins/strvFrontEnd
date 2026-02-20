@@ -11,12 +11,20 @@
     <h1>Activity Dashboard</h1>
 
     <!-- Filter Header -->
-    <div class="filter-container">
-        <button class="filter-btn active" data-type="All">All Activities</button>
-        <button class="filter-btn" data-type="Run">Run</button>
-        <button class="filter-btn" data-type="Ride">Ride</button>
-        <button class="filter-btn" data-type="Swim">Swim</button>
-        <button class="filter-btn" data-type="Hike">Hike</button>
+    <div class="filter-header-wrapper">
+        <div class="filter-container">
+            <button class="filter-btn active" data-type="All">All Activities</button>
+            <button class="filter-btn" data-type="Run">Run</button>
+            <button class="filter-btn" data-type="Ride">Ride</button>
+            <button class="filter-btn" data-type="Swim">Swim</button>
+            <button class="filter-btn" data-type="Hike">Hike</button>
+        </div>
+        <button id="reopen-random-photo-btn" class="random-photo-btn" style="display: none;">📷 View Random Memory</button>
+    </div>
+
+    <!-- Random Photo Container -->
+    <div id="random-photo-container" style="display: none;">
+        <!-- Filled dynamically by client.js -->
     </div>
 
     <!-- Heatmap Dashboard -->
