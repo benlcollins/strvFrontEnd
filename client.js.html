@@ -147,6 +147,7 @@
     function processData() {
         const dailyData = {};
         const years = new Set();
+        const yearlyStats = {};
         let maxHours = 0;
 
         console.log(`Processing ${rawData.length} rows with filter: ${currentFilter}`);
@@ -178,6 +179,15 @@
             const day = String(date.getDate()).padStart(2, '0');
             const dateKey = `${year}-${month}-${day}`;
 
+            if (!yearlyStats[year]) {
+                yearlyStats[year] = {
+                    totalHours: 0,
+                    totalDistance: 0,
+                    totalActivities: 0,
+                    typeCounts: {}
+                };
+            }
+
             if (!dailyData[dateKey]) {
                 dailyData[dateKey] = {
                     totalHours: 0,
@@ -192,6 +202,17 @@
             if (photoVal) {
                 photos = String(photoVal).split(/,|\s+/).filter(v => v.trim().startsWith('http')).slice(0, 3);
             }
+
+            // Update yearly stats
+            yearlyStats[year].totalHours += hours;
+            yearlyStats[year].totalDistance += Number(distance) || 0;
+            yearlyStats[year].totalActivities += 1;
+
+            const activityType = type || 'Other';
+            if (!yearlyStats[year].typeCounts[activityType]) {
+                yearlyStats[year].typeCounts[activityType] = 0;
+            }
+            yearlyStats[year].typeCounts[activityType] += 1;
 
             dailyData[dateKey].totalHours += hours;
             dailyData[dateKey].activities.push({
@@ -210,7 +231,7 @@
 
         console.log(`Processing complete. Found ${Object.keys(dailyData).length} days with activities.`);
         const sortedYears = Array.from(years).sort((a, b) => b - a);
-        return { dailyData, maxHours, years: sortedYears };
+        return { dailyData, maxHours, years: sortedYears, yearlyStats };
     }
 
     function renderHeatmap() {
@@ -222,7 +243,7 @@
             return;
         }
 
-        const { dailyData, maxHours, years } = processData();
+        const { dailyData, maxHours, years, yearlyStats } = processData();
 
         if (years.length === 0) {
             container.innerHTML = '<div class="loading">No valid activities found for this filter.</div>';
@@ -230,21 +251,65 @@
         }
 
         years.forEach(year => {
-            renderYearGrid(year, dailyData, maxHours, container);
+            renderYearGrid(year, dailyData, maxHours, container, yearlyStats[year]);
         });
     }
 
-    function renderYearGrid(targetYear, dailyData, maxHours, mainContainer) {
+    function renderYearGrid(targetYear, dailyData, maxHours, mainContainer, yearStats) {
         // Create Year Container
         const yearWrapper = document.createElement('div');
         yearWrapper.className = 'heatmap-container';
         yearWrapper.style.marginBottom = '40px';
 
+        // Year Header Wrapper
+        const headerWrapper = document.createElement('div');
+        headerWrapper.className = 'year-header-wrapper';
+
         // Year Label
         const yearLabel = document.createElement('div');
         yearLabel.className = 'year-label';
         yearLabel.innerText = targetYear;
-        yearWrapper.appendChild(yearLabel);
+        headerWrapper.appendChild(yearLabel);
+
+        // Year Stats
+        if (yearStats) {
+            // Stats Blocks Container
+            const statsBlocksContainer = document.createElement('div');
+            statsBlocksContainer.className = 'stat-blocks-container';
+
+            // Hours
+            const hoursBlock = document.createElement('div');
+            hoursBlock.className = 'stat-block';
+            hoursBlock.innerHTML = `<div class="stat-number stat-blue">${Math.round(yearStats.totalHours)}</div><div class="stat-label">Hours</div>`;
+            statsBlocksContainer.appendChild(hoursBlock);
+
+            // Miles
+            const milesBlock = document.createElement('div');
+            milesBlock.className = 'stat-block';
+            milesBlock.innerHTML = `<div class="stat-number">${yearStats.totalDistance.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div><div class="stat-label">Miles</div>`;
+            statsBlocksContainer.appendChild(milesBlock);
+
+            // Activities
+            const actsBlock = document.createElement('div');
+            actsBlock.className = 'stat-block';
+            actsBlock.innerHTML = `<div class="stat-number">${yearStats.totalActivities}</div><div class="stat-label">Activities</div>`;
+            statsBlocksContainer.appendChild(actsBlock);
+
+            headerWrapper.appendChild(statsBlocksContainer);
+
+            // Breakdown
+            const breakdownContainer = document.createElement('div');
+            breakdownContainer.className = 'stat-breakdown';
+            let breakdownHtml = '';
+            for (const [type, count] of Object.entries(yearStats.typeCounts)) {
+                breakdownHtml += `<span class="breakdown-item"><span style="font-weight:600;">${count}</span> ${type}</span>`;
+            }
+            breakdownContainer.innerHTML = breakdownHtml;
+
+            headerWrapper.appendChild(breakdownContainer);
+        }
+
+        yearWrapper.appendChild(headerWrapper);
 
         // Month Labels
         const monthsAxis = document.createElement('div');
@@ -464,20 +529,20 @@
 
         const dateStr = dateObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
-        let html = `< div class="tooltip-date" > ${dateStr}</div > `;
+        let html = `<div class="tooltip-date">${dateStr}</div>`;
 
         dayData.activities.forEach(act => {
             let photosHtml = '';
             if (act.photos && act.photos.length > 0) {
-                photosHtml = `< div class="tooltip-photos" > `;
+                photosHtml = `<div class="tooltip-photos">`;
                 act.photos.forEach(url => {
-                    photosHtml += `< img src = "${url}" class="tooltip-thumb" alt = "Activity photo" > `;
+                    photosHtml += `<img src="${url}" class="tooltip-thumb" alt="Activity photo">`;
                 });
-                photosHtml += `</div > `;
+                photosHtml += `</div>`;
             }
 
             html += `
-                < div class="tooltip-activity" >
+                <div class="tooltip-activity">
                     <span class="tooltip-icon">${getIcon(act.type)}</span>
                     <div class="tooltip-details">
                         <div class="tooltip-name">${act.name}</div>
@@ -487,7 +552,7 @@
                         </div>
                         ${photosHtml}
                     </div>
-                </div >
+                </div>
              `;
         });
 
