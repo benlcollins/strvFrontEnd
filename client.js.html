@@ -280,7 +280,7 @@
             // Hours
             const hoursBlock = document.createElement('div');
             hoursBlock.className = 'stat-block';
-            hoursBlock.innerHTML = `<div class="stat-number stat-blue">${Math.round(yearStats.totalHours)}</div><div class="stat-label">Hours</div>`;
+            hoursBlock.innerHTML = `<div class="stat-number">${Math.round(yearStats.totalHours)}</div><div class="stat-label">Hours</div>`;
             statsBlocksContainer.appendChild(hoursBlock);
 
             // Miles
@@ -298,6 +298,12 @@
             headerWrapper.appendChild(statsBlocksContainer);
 
             // Breakdown
+            const breakdownWrapper = document.createElement('div');
+            breakdownWrapper.style.width = '100%';
+            breakdownWrapper.style.display = 'flex';
+            breakdownWrapper.style.justifyContent = 'center';
+            breakdownWrapper.style.marginTop = '4px';
+
             const breakdownContainer = document.createElement('div');
             breakdownContainer.className = 'stat-breakdown';
             let breakdownHtml = '';
@@ -305,8 +311,9 @@
                 breakdownHtml += `<span class="breakdown-item"><span style="font-weight:600;">${count}</span> ${type}</span>`;
             }
             breakdownContainer.innerHTML = breakdownHtml;
+            breakdownWrapper.appendChild(breakdownContainer);
 
-            headerWrapper.appendChild(breakdownContainer);
+            headerWrapper.appendChild(breakdownWrapper);
         }
 
         yearWrapper.appendChild(headerWrapper);
