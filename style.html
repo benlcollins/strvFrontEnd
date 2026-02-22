@@ -218,12 +218,11 @@
 
   .year-header-wrapper {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     width: 100%;
-    margin-bottom: 16px;
-    flex-wrap: wrap;
-    gap: 15px;
+    margin-bottom: 12px;
+    gap: 8px;
   }
 
   .year-label {
@@ -233,12 +232,18 @@
     min-width: 80px;
   }
 
+  .metrics-breakdown-container {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
   .stat-blocks-container {
     display: flex;
-    gap: 32px;
+    gap: 16px;
     align-items: center;
-    justify-content: center;
-    flex: 1;
   }
 
   .stat-block {
@@ -248,8 +253,8 @@
   }
 
   .stat-number {
-    font-size: 36px;
-    font-weight: 300;
+    font-size: 20px;
+    font-weight: 500;
     color: #24292e;
     line-height: 1.1;
   }
@@ -259,10 +264,10 @@
   }
 
   .stat-label {
-    font-size: 13px;
+    font-size: 11px;
     color: #666;
     text-transform: capitalize;
-    margin-top: 4px;
+    margin-top: 2px;
   }
 
   .stat-breakdown {
@@ -270,10 +275,7 @@
     gap: 12px;
     font-size: 13px;
     color: #586069;
-    background: #f6f8fa;
-    padding: 8px 16px;
-    border-radius: 24px;
-    border: 1px solid #e1e4e8;
+    padding: 0;
   }
 
   .breakdown-item {

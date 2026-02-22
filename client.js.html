@@ -273,6 +273,10 @@
 
         // Year Stats
         if (yearStats) {
+            // Container for metrics and breakdown on the same line
+            const metricsBreakdownContainer = document.createElement('div');
+            metricsBreakdownContainer.className = 'metrics-breakdown-container';
+
             // Stats Blocks Container
             const statsBlocksContainer = document.createElement('div');
             statsBlocksContainer.className = 'stat-blocks-container';
@@ -295,15 +299,9 @@
             actsBlock.innerHTML = `<div class="stat-number">${yearStats.totalActivities}</div><div class="stat-label">Activities</div>`;
             statsBlocksContainer.appendChild(actsBlock);
 
-            headerWrapper.appendChild(statsBlocksContainer);
+            metricsBreakdownContainer.appendChild(statsBlocksContainer);
 
             // Breakdown
-            const breakdownWrapper = document.createElement('div');
-            breakdownWrapper.style.width = '100%';
-            breakdownWrapper.style.display = 'flex';
-            breakdownWrapper.style.justifyContent = 'center';
-            breakdownWrapper.style.marginTop = '4px';
-
             const breakdownContainer = document.createElement('div');
             breakdownContainer.className = 'stat-breakdown';
             let breakdownHtml = '';
@@ -311,9 +309,10 @@
                 breakdownHtml += `<span class="breakdown-item"><span style="font-weight:600;">${count}</span> ${type}</span>`;
             }
             breakdownContainer.innerHTML = breakdownHtml;
-            breakdownWrapper.appendChild(breakdownContainer);
 
-            headerWrapper.appendChild(breakdownWrapper);
+            metricsBreakdownContainer.appendChild(breakdownContainer);
+
+            headerWrapper.appendChild(metricsBreakdownContainer);
         }
 
         yearWrapper.appendChild(headerWrapper);
