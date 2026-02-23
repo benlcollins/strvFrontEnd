@@ -161,7 +161,13 @@
             const photoVal = colIndices.photos !== -1 ? row[colIndices.photos] : null;
             const linkVal = colIndices.link !== -1 ? row[colIndices.link] : null;
 
-            if (currentFilter !== 'All' && type !== currentFilter) return;
+            if (currentFilter !== 'All') {
+                const typeLower = String(type).toLowerCase().trim();
+                const filterLower = currentFilter.toLowerCase().trim();
+
+                const isHikeOrWalk = filterLower === 'hike' && (typeLower.includes('hike') || typeLower.includes('walk'));
+                if (!isHikeOrWalk && typeLower !== filterLower) return;
+            }
             if (!dateStr) return;
 
             const date = new Date(dateStr);
