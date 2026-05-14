@@ -113,8 +113,13 @@
             }
 
             rawData = data;
-            initRandomPhoto();
             checkOnThisDay();
+            if (onThisDayActivities.length > 0) {
+                initOnThisDay(true);
+                initRandomPhoto(false);
+            } else {
+                initRandomPhoto(true);
+            }
             renderHeatmap();
         } catch (e) {
             console.error("Error processing data", e);
@@ -414,10 +419,12 @@
     }
 
     // --- Random Photo Logic ---
-    function initRandomPhoto() {
-        // Hide On This Day if open
-        if (document.getElementById('on-this-day-container').style.display !== 'none') {
-            closeOnThisDay();
+    function initRandomPhoto(autoOpen = true) {
+        if (autoOpen) {
+            // Hide On This Day if open
+            if (document.getElementById('on-this-day-container').style.display !== 'none') {
+                closeOnThisDay();
+            }
         }
 
         const activitiesWithPhotos = [];
@@ -461,9 +468,14 @@
             };
 
             currentPhotoIndex = 0;
-            renderRandomPhoto();
-            document.getElementById('random-photo-container').style.display = 'block';
-            document.getElementById('reopen-random-photo-btn').style.display = 'none';
+            if (autoOpen) {
+                renderRandomPhoto();
+                document.getElementById('random-photo-container').style.display = 'block';
+                document.getElementById('reopen-random-photo-btn').style.display = 'none';
+            } else {
+                document.getElementById('random-photo-container').style.display = 'none';
+                document.getElementById('reopen-random-photo-btn').style.display = 'block';
+            }
         } else {
             document.getElementById('random-photo-container').style.display = 'none';
             document.getElementById('reopen-random-photo-btn').style.display = 'none';
@@ -579,24 +591,29 @@
         if (onThisDayActivities.length > 0) {
             // Sort by most recent past year first
             onThisDayActivities.sort((a, b) => b.year - a.year);
-            document.getElementById('reopen-on-this-day-btn').style.display = 'block';
+            // Button visibility handled by initOnThisDay
         } else {
             document.getElementById('reopen-on-this-day-btn').style.display = 'none';
         }
     }
 
-    function initOnThisDay() {
+    function initOnThisDay(autoOpen = true) {
         if (onThisDayActivities.length === 0) return;
         currentOtdIndex = 0;
         
-        // Hide Random Photo if open
-        if (document.getElementById('random-photo-container').style.display !== 'none') {
-            closeRandomPhoto();
+        if (autoOpen) {
+            // Hide Random Photo if open
+            if (document.getElementById('random-photo-container').style.display !== 'none') {
+                closeRandomPhoto();
+            }
+            
+            renderOnThisDay();
+            document.getElementById('on-this-day-container').style.display = 'block';
+            document.getElementById('reopen-on-this-day-btn').style.display = 'none';
+        } else {
+            document.getElementById('on-this-day-container').style.display = 'none';
+            document.getElementById('reopen-on-this-day-btn').style.display = 'block';
         }
-        
-        renderOnThisDay();
-        document.getElementById('on-this-day-container').style.display = 'block';
-        document.getElementById('reopen-on-this-day-btn').style.display = 'none';
     }
 
     function renderOnThisDay() {
