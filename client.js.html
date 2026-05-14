@@ -9,11 +9,15 @@
         name: 1,
         distance: 5,
         photos: -1,
-        link: -1
+        link: -1,
+        elapsedTime: -1
     };
 
     let randomPhotoActivity = null;
     let currentPhotoIndex = 0;
+
+    let onThisDayActivities = [];
+    let currentOtdIndex = 0;
 
     // --- Constants ---
     const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -27,11 +31,12 @@
         document.getElementById('reopen-random-photo-btn').addEventListener('click', () => {
             // Check if we have an activity to show
             if (randomPhotoActivity) {
-                // If the user clicks reopen, maybe we can pick a new random photo or just show the same one.
-                // It's fun to pick a new one, but let's stick to showing the current random photo for now to keep it simple,
-                // or actually calling initRandomPhoto() again will pick a new one!
                 initRandomPhoto();
             }
+        });
+
+        document.getElementById('reopen-on-this-day-btn').addEventListener('click', () => {
+            initOnThisDay();
         });
     });
 
@@ -88,6 +93,7 @@
             const distanceIdx = findCol(['distance', 'dist']);
             const photoIdx = findCol(['photos', 'images', 'links', 'media']);
             const linkIdx = findCol(['strava link', 'link', 'url']);
+            const elapsedTimeIdx = findCol(['elapsed time']);
 
             // Update indices if found
             if (typeIdx !== -1) colIndices.type = typeIdx;
@@ -97,6 +103,7 @@
             if (distanceIdx !== -1) colIndices.distance = distanceIdx;
             if (photoIdx !== -1) colIndices.photos = photoIdx;
             if (linkIdx !== -1) colIndices.link = linkIdx;
+            if (elapsedTimeIdx !== -1) colIndices.elapsedTime = elapsedTimeIdx;
 
             console.log('Detected column indices:', colIndices);
 
@@ -107,6 +114,7 @@
 
             rawData = data;
             initRandomPhoto();
+            checkOnThisDay();
             renderHeatmap();
         } catch (e) {
             console.error("Error processing data", e);
@@ -160,20 +168,25 @@
             const distance = row[colIndices.distance];
             const photoVal = colIndices.photos !== -1 ? row[colIndices.photos] : null;
             const linkVal = colIndices.link !== -1 ? row[colIndices.link] : null;
+            const elapsedTimeVal = colIndices.elapsedTime !== -1 ? row[colIndices.elapsedTime] : null;
 
             if (currentFilter !== 'All') {
                 const typeLower = String(type).toLowerCase().trim();
                 const filterLower = currentFilter.toLowerCase().trim();
 
                 const isHikeOrWalk = filterLower === 'hike' && (typeLower.includes('hike') || typeLower.includes('walk'));
-                if (!isHikeOrWalk && typeLower !== filterLower) return;
+                const isKayakOrSUP = filterLower === 'kayak' && (typeLower.includes('kayak') || typeLower.includes('standuppaddling') || typeLower.includes('stand up paddling') || typeLower.includes('sup'));
+                if (!isHikeOrWalk && !isKayakOrSUP && typeLower !== filterLower) return;
             }
             if (!dateStr) return;
 
             const date = new Date(dateStr);
             if (isNaN(date.getTime())) return;
 
-            const movingTimeSec = parseDuration(movingTimeVal);
+            let movingTimeSec = parseDuration(movingTimeVal);
+            if (movingTimeSec <= 0 && elapsedTimeVal) {
+                movingTimeSec = parseDuration(elapsedTimeVal);
+            }
             if (movingTimeSec <= 0) return;
 
             // Track year
@@ -402,6 +415,11 @@
 
     // --- Random Photo Logic ---
     function initRandomPhoto() {
+        // Hide On This Day if open
+        if (document.getElementById('on-this-day-container').style.display !== 'none') {
+            closeOnThisDay();
+        }
+
         const activitiesWithPhotos = [];
         rawData.forEach(row => {
             const photoVal = colIndices.photos !== -1 ? row[colIndices.photos] : null;
@@ -519,6 +537,154 @@
         document.getElementById('reopen-random-photo-btn').style.display = 'block';
     }
 
+    // --- On This Day Logic ---
+    function checkOnThisDay() {
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentDate = today.getDate();
+        const currentYear = today.getFullYear();
+        
+        onThisDayActivities = [];
+
+        rawData.forEach(row => {
+            const dateStr = row[colIndices.date];
+            if (!dateStr) return;
+            const rowDate = new Date(dateStr);
+            if (isNaN(rowDate.getTime())) return;
+            
+            if (rowDate.getMonth() === currentMonth && rowDate.getDate() === currentDate && rowDate.getFullYear() < currentYear) {
+                const type = row[colIndices.type] || 'Activity';
+                const name = row[colIndices.name] || 'Untitled Activity';
+                const distance = row[colIndices.distance] || 0;
+                const timeVal = row[colIndices.time];
+                const movingTimeSec = parseDuration(timeVal);
+                if (movingTimeSec <= 0) return; // Skip invalid times
+                const hours = movingTimeSec / 3600;
+                const link = colIndices.link !== -1 ? row[colIndices.link] : null;
+                const year = rowDate.getFullYear();
+                const yearsAgo = currentYear - year;
+                
+                let photos = [];
+                const photoVal = colIndices.photos !== -1 ? row[colIndices.photos] : null;
+                if (photoVal) {
+                    photos = String(photoVal).split(/,|\s+/).filter(v => v.trim().startsWith('http'));
+                }
+                
+                onThisDayActivities.push({
+                    type, name, distance, hours, link, photos, year, yearsAgo
+                });
+            }
+        });
+
+        if (onThisDayActivities.length > 0) {
+            // Sort by most recent past year first
+            onThisDayActivities.sort((a, b) => b.year - a.year);
+            document.getElementById('reopen-on-this-day-btn').style.display = 'block';
+        } else {
+            document.getElementById('reopen-on-this-day-btn').style.display = 'none';
+        }
+    }
+
+    function initOnThisDay() {
+        if (onThisDayActivities.length === 0) return;
+        currentOtdIndex = 0;
+        
+        // Hide Random Photo if open
+        if (document.getElementById('random-photo-container').style.display !== 'none') {
+            closeRandomPhoto();
+        }
+        
+        renderOnThisDay();
+        document.getElementById('on-this-day-container').style.display = 'block';
+        document.getElementById('reopen-on-this-day-btn').style.display = 'none';
+    }
+
+    function renderOnThisDay() {
+        if (onThisDayActivities.length === 0) return;
+        
+        const activity = onThisDayActivities[currentOtdIndex];
+        
+        const headerTitle = document.getElementById('otd-header-title');
+        const today = new Date();
+        const dateStr = today.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+        if (headerTitle) headerTitle.innerText = `On This Day - ${dateStr}`;
+        
+        // Image logic
+        const imgContainer = document.getElementById('otd-image-wrapper-container');
+        const imgEl = document.getElementById('otd-img-display');
+        const noPhotoNav = document.getElementById('otd-no-photo-nav');
+        const prevBtn = document.getElementById('otd-btn-prev');
+        const nextBtn = document.getElementById('otd-btn-next');
+        const otdCounter = document.getElementById('otd-counter');
+        
+        const total = onThisDayActivities.length;
+        
+        if (activity.photos && activity.photos.length > 0) {
+            imgContainer.style.display = 'flex';
+            noPhotoNav.style.display = 'none';
+            imgEl.src = activity.photos[0]; // just show first photo
+            
+            if (total > 1) {
+                prevBtn.style.display = 'flex';
+                nextBtn.style.display = 'flex';
+            } else {
+                prevBtn.style.display = 'none';
+                nextBtn.style.display = 'none';
+            }
+        } else {
+            imgContainer.style.display = 'none';
+            if (total > 1) {
+                noPhotoNav.style.display = 'flex';
+                otdCounter.innerText = `${currentOtdIndex + 1} of ${total}`;
+            } else {
+                noPhotoNav.style.display = 'none';
+            }
+        }
+        
+        // Badge
+        const badge = document.getElementById('otd-badge-display');
+        if (badge) {
+            badge.innerText = `${activity.yearsAgo} ${activity.yearsAgo === 1 ? 'year' : 'years'} ago (${activity.year})`;
+        }
+        
+        // Title
+        const titleContainer = document.getElementById('otd-title-display');
+        if (titleContainer) {
+            if (activity.link) {
+                titleContainer.innerHTML = `<a href="${activity.link}" target="_blank" class="rp-activity-name">${activity.name}</a>`;
+            } else {
+                titleContainer.innerHTML = `<div class="rp-activity-name">${activity.name}</div>`;
+            }
+        }
+        
+        // Meta
+        const metaContainer = document.getElementById('otd-meta-display');
+        if (metaContainer) {
+            metaContainer.innerHTML = `
+                <span>${getIcon(activity.type)} ${activity.type}</span>
+                <span>•</span>
+                <span>${activity.distance ? parseFloat(activity.distance).toFixed(2) + ' mi' : '0 mi'}</span>
+                <span>•</span>
+                <span>${activity.hours.toFixed(1)}h</span>
+            `;
+        }
+    }
+    
+    function changeOnThisDay(dir) {
+        if (onThisDayActivities.length === 0) return;
+        currentOtdIndex += dir;
+        if (currentOtdIndex < 0) currentOtdIndex = onThisDayActivities.length - 1;
+        if (currentOtdIndex >= onThisDayActivities.length) currentOtdIndex = 0;
+        renderOnThisDay();
+    }
+    
+    function closeOnThisDay() {
+        document.getElementById('on-this-day-container').style.display = 'none';
+        if (onThisDayActivities.length > 0) {
+            document.getElementById('reopen-on-this-day-btn').style.display = 'block';
+        }
+    }
+
     // --- Tooltip Logic ---
     let tooltipEl = null;
 
@@ -528,6 +694,7 @@
         if (t.includes('ride') || t.includes('cycling')) return '🚴';
         if (t.includes('swim')) return '🏊';
         if (t.includes('hike') || t.includes('walk')) return '🥾';
+        if (t.includes('kayak') || t.includes('standuppaddling') || t.includes('stand up paddling') || t.includes('sup')) return '🛶';
         if (t.includes('workout') || t.includes('weight')) return '🏋️';
         return '🏅';
     }

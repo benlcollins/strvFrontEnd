@@ -14,13 +14,14 @@
     <div class="filter-header-wrapper">
         <div class="filter-container">
             <button class="filter-btn active" data-type="All">All Activities</button>
-            <button class="filter-btn" data-type="Run">Run</button>
-            <button class="filter-btn" data-type="Ride">Ride</button>
-            <button class="filter-btn" data-type="Swim">Swim</button>
             <button class="filter-btn" data-type="Hike">Hike</button>
+            <button class="filter-btn" data-type="Ride">Ride</button>
+            <button class="filter-btn" data-type="Kayak">Kayak</button>
         </div>
-        <button id="reopen-random-photo-btn" class="random-photo-btn" style="display: none;">📷 View Random
-            Memory</button>
+        <div class="action-buttons-container" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 10px;">
+            <button id="reopen-random-photo-btn" class="random-photo-btn" style="display: none;">📷 View Random Memory</button>
+            <button id="reopen-on-this-day-btn" class="random-photo-btn" style="display: none;">📅 On This Day</button>
+        </div>
     </div>
 
     <!-- Random Photo Container -->
@@ -45,6 +46,35 @@
                 style="font-size: 13px; color: #586069; margin-bottom: 6px;"></div>
             <div id="rp-title-display"></div>
             <div id="rp-meta-display" class="rp-activity-meta"></div>
+        </div>
+    </div>
+
+    <!-- On This Day Container -->
+    <div id="on-this-day-container" style="display: none;">
+        <div class="rp-header">
+            <h3 class="rp-title" id="otd-header-title">On This Day</h3>
+            <div class="rp-header-actions" style="display: flex; gap: 12px; align-items: center;">
+                <button class="rp-close" onclick="closeOnThisDay()" title="Close">×</button>
+            </div>
+        </div>
+        <div id="otd-image-wrapper-container" class="rp-image-wrapper" style="display: none;">
+            <button id="otd-btn-prev" class="rp-arrow rp-arrow-left" onclick="changeOnThisDay(-1)"
+                style="display: none;">❮</button>
+            <img id="otd-img-display" src="" class="rp-image" alt="On This Day Activity Photo">
+            <button id="otd-btn-next" class="rp-arrow rp-arrow-right" onclick="changeOnThisDay(1)"
+                style="display: none;">❯</button>
+        </div>
+        <!-- We can place arrows in details if there is no photo, but let's just make it simple: if no photo, arrows are below -->
+        <div class="rp-details" style="position: relative;">
+            <div id="otd-badge-display" class="otd-badge"></div>
+            <div id="otd-title-display" style="margin-top: 8px;"></div>
+            <div id="otd-meta-display" class="rp-activity-meta" style="margin-top: 4px;"></div>
+            
+            <div id="otd-no-photo-nav" style="display: none; justify-content: space-between; margin-top: 15px; align-items: center;">
+                <button class="otd-nav-btn" onclick="changeOnThisDay(-1)">❮ Previous</button>
+                <span id="otd-counter" style="font-size: 13px; color: #586069;"></span>
+                <button class="otd-nav-btn" onclick="changeOnThisDay(1)">Next ❯</button>
+            </div>
         </div>
     </div>
 

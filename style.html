@@ -82,8 +82,8 @@
     background-color: #f3f4f6;
   }
 
-  /* Random Photo Container */
-  #random-photo-container {
+  /* Random Photo & On This Day Containers */
+  #random-photo-container, #on-this-day-container {
     width: 100%;
     max-width: 600px;
     margin: 0 auto 40px auto;
@@ -195,6 +195,33 @@
     align-items: center;
   }
 
+  .otd-badge {
+    display: inline-block;
+    background-color: #fff3ed;
+    color: var(--strava-orange);
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    border: 1px solid #ffdecb;
+  }
+
+  .otd-nav-btn {
+    background: none;
+    border: 1px solid #d1d5da;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    color: #24292e;
+    transition: all 0.2s ease;
+  }
+
+  .otd-nav-btn:hover {
+    background-color: #f3f4f6;
+  }
+
   /* Heatmap Container */
   #main-heatmap-container {
     width: 100%;
@@ -208,7 +235,7 @@
   .heatmap-container {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     overflow-x: auto;
     max-width: 100%;
     padding-bottom: 20px;
