@@ -26,8 +26,8 @@
 
     <!-- Random Photo Container -->
     <div id="random-photo-container" style="display: none;">
-        <div class="rp-header">
-            <h3 class="rp-title">Random Memory</h3>
+        <h2 class="section-header">Random Memory</h2>
+        <div class="rp-header" style="justify-content: flex-end;">
             <div class="rp-header-actions" style="display: flex; gap: 12px; align-items: center;">
                 <button class="rp-close" onclick="initRandomPhoto()" title="Show another random memory"
                     style="font-size: 18px;">↻</button>
@@ -51,8 +51,8 @@
 
     <!-- On This Day Container -->
     <div id="on-this-day-container" style="display: none;">
-        <div class="rp-header">
-            <h3 class="rp-title" id="otd-header-title">On This Day</h3>
+        <h2 class="section-header">On This Day</h2>
+        <div class="rp-header" style="justify-content: flex-end;">
             <div class="rp-header-actions" style="display: flex; gap: 12px; align-items: center;">
                 <button class="rp-close" onclick="closeOnThisDay()" title="Close">×</button>
             </div>
@@ -78,7 +78,13 @@
         </div>
     </div>
 
+    <!-- Global Stats Container (PRs, Streaks) -->
+    <div id="global-stats-container" style="display: none; margin-bottom: 30px; width: 100%; max-width: 1000px; margin-left: auto; margin-right: auto;">
+        <!-- Will be populated by JS -->
+    </div>
+
     <!-- Heatmap Dashboard -->
+    <h2 class="section-header">Activity Heatmap</h2>
     <div id="main-heatmap-container">
         <div class="loading">Loading activities...</div>
     </div>

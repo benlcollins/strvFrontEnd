@@ -163,6 +163,17 @@
         const yearlyStats = {};
         let maxHours = 0;
 
+        // PR and Streak Trackers
+        let maxRide = null;
+        let maxHike = null;
+        let maxKayak = null;
+        let maxOverall = null;
+        const activeDatesSet = new Set();
+
+        const today = new Date();
+        const startOfCurrentYear = new Date(today.getFullYear(), 0, 1);
+        const currentDayOfYear = Math.floor((today - startOfCurrentYear) / MS_PER_DAY);
+
         console.log(`Processing ${rawData.length} rows with filter: ${currentFilter}`);
 
         rawData.forEach((row, idx) => {
@@ -208,7 +219,9 @@
                     totalHours: 0,
                     totalDistance: 0,
                     totalActivities: 0,
-                    typeCounts: {}
+                    typeCounts: {},
+                    ytdHours: 0,
+                    monthlyHours: new Array(12).fill(0)
                 };
             }
 
@@ -220,12 +233,47 @@
             }
 
             const hours = movingTimeSec / 3600;
+            const distNum = Number(distance) || 0;
 
             // Extract photos (limit to 3)
             let photos = [];
             if (photoVal) {
                 photos = String(photoVal).split(/,|\s+/).filter(v => v.trim().startsWith('http')).slice(0, 3);
             }
+
+            // PRs
+            const actObj = {
+                name: name || 'Untitled Activity',
+                distance: distNum,
+                type: type || 'Other',
+                link: linkVal || null
+            };
+
+            if (!maxOverall || distNum > maxOverall.distance) maxOverall = actObj;
+            
+            const localTypeLower = String(type).toLowerCase().trim();
+            const isHikeType = localTypeLower.includes('hike') || localTypeLower.includes('walk');
+            const isRideType = localTypeLower.includes('ride') || localTypeLower.includes('cycling');
+            const isKayakType = localTypeLower.includes('kayak') || localTypeLower.includes('sup') || localTypeLower.includes('standuppaddling') || localTypeLower.includes('stand up paddling');
+
+            if (isRideType) {
+                if (!maxRide || distNum > maxRide.distance) maxRide = actObj;
+            } else if (isHikeType) {
+                if (!maxHike || distNum > maxHike.distance) maxHike = actObj;
+            } else if (isKayakType) {
+                if (!maxKayak || distNum > maxKayak.distance) maxKayak = actObj;
+            }
+
+            // YoY and Monthly Calculations
+            const startOfYear = new Date(year, 0, 1);
+            const actDayOfYear = Math.floor((date - startOfYear) / MS_PER_DAY);
+            if (actDayOfYear <= currentDayOfYear) {
+                yearlyStats[year].ytdHours += hours;
+            }
+            yearlyStats[year].monthlyHours[date.getMonth()] += hours;
+
+            // Streaks
+            activeDatesSet.add(dateKey);
 
             // Update yearly stats
             yearlyStats[year].totalHours += hours;
@@ -255,7 +303,59 @@
 
         console.log(`Processing complete. Found ${Object.keys(dailyData).length} days with activities.`);
         const sortedYears = Array.from(years).sort((a, b) => b - a);
-        return { dailyData, maxHours, years: sortedYears, yearlyStats };
+
+        // Calculate Streaks
+        const sortedDates = Array.from(activeDatesSet).sort();
+        let currentStreak = 0;
+        let maxStreak = 0;
+        let tempStreak = 0;
+        
+        for (let i = 0; i < sortedDates.length; i++) {
+            if (i === 0) {
+                tempStreak = 1;
+            } else {
+                const prevDate = new Date(sortedDates[i-1]);
+                const currDate = new Date(sortedDates[i]);
+                const diffDays = Math.round((currDate - prevDate) / MS_PER_DAY);
+                if (diffDays === 1) {
+                    tempStreak++;
+                } else if (diffDays > 1) {
+                    if (tempStreak > maxStreak) maxStreak = tempStreak;
+                    tempStreak = 1;
+                }
+            }
+        }
+        if (tempStreak > maxStreak) maxStreak = tempStreak;
+        
+        // Calculate current streak
+        const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayKey = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+        
+        const checkStreakBackwards = (startKey, startDateObj) => {
+            let streak = 1;
+            let checkDate = new Date(startDateObj);
+            while(true) {
+                checkDate.setDate(checkDate.getDate() - 1);
+                const checkKey = `${checkDate.getFullYear()}-${String(checkDate.getMonth()+1).padStart(2,'0')}-${String(checkDate.getDate()).padStart(2,'0')}`;
+                if (activeDatesSet.has(checkKey)) streak++;
+                else break;
+            }
+            return streak;
+        };
+
+        if (activeDatesSet.has(todayKey)) {
+            currentStreak = checkStreakBackwards(todayKey, today);
+        } else if (activeDatesSet.has(yesterdayKey)) {
+             currentStreak = checkStreakBackwards(yesterdayKey, yesterday);
+        }
+
+        return { 
+            dailyData, maxHours, years: sortedYears, yearlyStats, 
+            prs: { maxRide, maxHike, maxKayak, maxOverall },
+            streaks: { current: currentStreak, max: maxStreak }
+        };
     }
 
     function renderHeatmap() {
@@ -267,19 +367,63 @@
             return;
         }
 
-        const { dailyData, maxHours, years, yearlyStats } = processData();
+        const { dailyData, maxHours, years, yearlyStats, prs, streaks } = processData();
+
+        renderGlobalStats(prs, streaks);
 
         if (years.length === 0) {
             container.innerHTML = '<div class="loading">No valid activities found for this filter.</div>';
             return;
         }
 
-        years.forEach(year => {
-            renderYearGrid(year, dailyData, maxHours, container, yearlyStats[year]);
+        years.forEach((year, index) => {
+            const prevYear = years[index + 1];
+            const prevYearStats = (index === 0 && prevYear) ? yearlyStats[prevYear] : null;
+            renderYearGrid(year, dailyData, maxHours, container, yearlyStats[year], prevYearStats);
         });
     }
 
-    function renderYearGrid(targetYear, dailyData, maxHours, mainContainer, yearStats) {
+    function renderGlobalStats(prs, streaks) {
+        const container = document.getElementById('global-stats-container');
+        if (!container) return;
+        
+        let html = '<h2 class="section-header">Trophy Case</h2>';
+        html += '<div class="global-stats-grid">';
+        
+        const makeCard = (title, prObj) => {
+            if (!prObj) return '';
+            const distance = prObj.distance ? parseFloat(prObj.distance).toFixed(1) : '0';
+            const nameHtml = prObj.link ? `<a href="${prObj.link}" target="_blank" style="color: inherit; text-decoration: none;">${prObj.name}</a>` : prObj.name;
+            return `
+                <div class="stat-card">
+                    <div class="stat-card-title">${title}</div>
+                    <div class="stat-card-value">${distance} mi</div>
+                    <div class="stat-card-sub">${nameHtml}</div>
+                </div>
+            `;
+        };
+
+        html += makeCard('Longest Ride', prs.maxRide);
+        html += makeCard('Longest Hike', prs.maxHike);
+        html += makeCard('Longest Kayak', prs.maxKayak);
+        html += makeCard('Longest Overall', prs.maxOverall);
+        
+        html += '</div>';
+
+        html += '<h2 class="section-header" style="margin-top: 30px;">Streak</h2>';
+        html += `
+            <div style="width: 100%; display: flex; justify-content: center;">
+                <div class="streak-badge" title="Active days in a row">
+                    🔥 ${streaks.current} Day${streaks.current===1?'':'s'} (Current) <span style="color: #d1d5da; margin: 0 4px;">|</span> 🏆 ${streaks.max} Day${streaks.max===1?'':'s'} (Best)
+                </div>
+            </div>
+        `;
+        
+        container.innerHTML = html;
+        container.style.display = 'block';
+    }
+
+    function renderYearGrid(targetYear, dailyData, maxHours, mainContainer, yearStats, prevYearStats) {
         // Create Year Container
         const yearWrapper = document.createElement('div');
         yearWrapper.className = 'heatmap-container';
@@ -289,11 +433,34 @@
         const headerWrapper = document.createElement('div');
         headerWrapper.className = 'year-header-wrapper';
 
+        // Year Header Top Wrapper
+        const yearHeaderTop = document.createElement('div');
+        yearHeaderTop.className = 'year-header-top';
+
         // Year Label
         const yearLabel = document.createElement('div');
         yearLabel.className = 'year-label';
         yearLabel.innerText = targetYear;
-        headerWrapper.appendChild(yearLabel);
+        yearHeaderTop.appendChild(yearLabel);
+
+        // Monthly Bar Chart
+        if (yearStats && yearStats.monthlyHours) {
+            const chartContainer = document.createElement('div');
+            chartContainer.className = 'monthly-chart-container';
+            const maxMonth = Math.max(...yearStats.monthlyHours);
+            
+            yearStats.monthlyHours.forEach((val, idx) => {
+                const bar = document.createElement('div');
+                bar.className = 'monthly-bar';
+                const pct = maxMonth > 0 ? (val / maxMonth) * 100 : 0;
+                bar.style.height = `${pct}%`;
+                bar.title = `${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][idx]}: ${Math.round(val)}h`;
+                chartContainer.appendChild(bar);
+            });
+            yearHeaderTop.appendChild(chartContainer);
+        }
+
+        headerWrapper.appendChild(yearHeaderTop);
 
         // Year Stats
         if (yearStats) {
@@ -324,6 +491,31 @@
             statsBlocksContainer.appendChild(actsBlock);
 
             metricsBreakdownContainer.appendChild(statsBlocksContainer);
+
+            if (prevYearStats) {
+                const diffHours = yearStats.ytdHours - prevYearStats.ytdHours;
+                const isUp = diffHours > 0;
+                const isDown = diffHours < 0;
+                let badgeClass = 'yoy-neutral';
+                let icon = '';
+                let text = `${Math.abs(Math.round(diffHours))}h vs prev year`;
+                
+                if (isUp) {
+                    badgeClass = 'yoy-up';
+                    icon = '▲';
+                    text = `+${Math.round(diffHours)}h vs prev year`;
+                } else if (isDown) {
+                    badgeClass = 'yoy-down';
+                    icon = '▼';
+                    text = `${Math.round(diffHours)}h vs prev year`;
+                }
+                
+                const yoyBadge = document.createElement('div');
+                yoyBadge.className = `yoy-badge ${badgeClass}`;
+                yoyBadge.title = "Comparing hours up to this day of the year";
+                yoyBadge.innerHTML = `${icon} ${text}`;
+                metricsBreakdownContainer.appendChild(yoyBadge);
+            }
 
             // Breakdown
             const breakdownContainer = document.createElement('div');
